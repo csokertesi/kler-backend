@@ -5,12 +5,143 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model client {
+  ClientId    Int       @id @default(autoincrement())
+  FullName    String    @db.TinyText
+  Name        String    @db.TinyText
+  Email       String    @unique
+  Phone       String    @db.TinyText
+  Contact     String    @db.TinyText
+  Address     String    @db.TinyText
+  Country     String    @db.TinyText
+  BankAccount String    @db.TinyText
+  contracts   contract?
+  users       users[]
+  sites       site[]
+}
+
+model contract {
+  ContractId Int      @id @default(autoincrement())
+  ExpireDate DateTime
+  BeginDate  DateTime
+  Client     Int      @unique
+  client     client   @relation(fields: [Client], references: [ClientId])
+}
+
+model users {
+  UserId    Int       @id @default(autoincrement())
+  Username  String    @db.TinyText
+  Email     String    @unique
+  Password  String?
+  OTP       String?
+  LastLogin DateTime?
+  Client    Int
+  client    client    @relation(fields: [Client], references: [ClientId])
+  accesses  access[]
+}
+
+model site {
+  SiteId            Int      @id @default(autoincrement())
+  Location          String
+  Name              String   @db.TinyText
+  PassiveStationAmt Int      @db.UnsignedTinyInt
+  ActiveStationAmt  Int      @db.UnsignedTinyInt
+  Client            Int
+  client            client   @relation(fields: [Client], references: [ClientId])
+  accesses          access[]
+  measpos           measpo[]
+  reports           report[]
+}
+
+model access {
+  AccessId Int   @id @default(autoincrement())
+  User     Int
+  Site     Int
+  site     site  @relation(fields: [Site], references: [SiteId])
+  user     users @relation(fields: [User], references: [UserId])
+}
+
+enum DeviceType {
+  PM
+  Passive
+  Weather
+  Other
+}
+
+model device {
+  DeviceId        Int        @id @default(autoincrement())
+  Type            DeviceType
+  SensorType      String?    @db.TinyText
+  NetworkSSID     String?    @db.TinyText
+  NetworkPassword String?    @db.TinyText
+  Computer        String?    @db.TinyText
+  IPAddress       String?    @db.TinyText
+  Interval        Int?       @db.UnsignedTinyInt
+  measpos         measpo[]
+}
+
+model measpo {
+  MeaspoId     Int            @id @default(autoincrement())
+  Site         Int
+  Device       Int
+  Location     String         @db.TinyText
+  Description  String?        @db.TinyText
+  site         site           @relation(fields: [Site], references: [SiteId])
+  device       device         @relation(fields: [Device], references: [DeviceId])
+  measurements measurements[]
+  weather      weather[]
+  debugs       debug[]
+}
+
+model report {
+  ReportId   Int      @id @default(autoincrement())
+  Date       DateTime
+  ReportType String   @db.TinyText
+  Content    String
+  Site       Int
+  site       site     @relation(fields: [Site], references: [SiteId])
+}
+
+model measurements {
+  MeasurementId BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  Measpo        Int
+  Time          DateTime
+  ActualTime    DateTime
+  PM10          Float?
+  PM4           Float?
+  PM2p5         Float?
+  PM1           Float?
+  Temperature   Float?
+  Humidity      Float?
+  measpo        measpo   @relation(fields: [Measpo], references: [MeaspoId])
+}
+
+model weather {
+  WeatherDataId Int    @id @default(autoincrement())
+  Measpo        Int
+  WindSpeed     Float?
+  WindDirection Float?
+  Rain          Float?
+  Temperature   Float?
+  Humidity      Float?
+  DewPoint      Float?
+  measpo        measpo @relation(fields: [Measpo], references: [MeaspoId])
+}
+
+model debug {
+  DebugId Int      @id @default(autoincrement())
+  Time    DateTime
+  Message String
+  Measpo  Int
+  measpo  measpo   @relation(fields: [Measpo], references: [MeaspoId])
 }
